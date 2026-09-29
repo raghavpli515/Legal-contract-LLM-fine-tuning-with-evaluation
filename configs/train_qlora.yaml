@@ -1,0 +1,46 @@
+# QLoRA training config, read by notebooks/kaggle_train.ipynb and scripts/dry_run_train.py.
+# Target hardware: 1x Tesla T4 (16GB, Turing -> no bf16, no FlashAttention-2).
+
+model_id: Qwen/Qwen2.5-7B-Instruct
+
+quantization:
+  load_in_4bit: true
+  bnb_4bit_quant_type: nf4          # NF4: quantile bins matched to ~normal weight distributions
+  bnb_4bit_use_double_quant: true   # also quantize the quantization constants (~0.4 bit/param saved)
+  bnb_4bit_compute_dtype: float16   # T4 has no bf16
+
+lora:
+  r: 16                             # rank of the low-rank decomposition
+  lora_alpha: 32                    # lora_alpha is the scaling factor, effective scale alpha/r = 2
+  lora_dropout: 0.05                # dropout applied to the low-rank decomposition
+  target_modules: all-linear        # q,k,v,o,gate,up,down (QLoRA paper: coverage > rank)
+  bias: none
+  task_type: CAUSAL_LM              # Causal LM: loss on the next token, not masked LM (loss on the masked token)
+
+training:
+  max_seq_length: 2048
+  per_device_train_batch_size: 1    # batch size per GPU, gradient accumulation steps will multiply this to effective batch size
+  gradient_accumulation_steps: 16   # effective batch 16
+  learning_rate: 2.0e-4
+  num_train_epochs: 1
+  lr_scheduler_type: cosine
+  warmup_ratio: 0.03                # warmup steps = 0.03 * (num_train_epochs * num_training_examples / effective_batch_size)
+  optim: paged_adamw_8bit           # paged: spills optimizer state to CPU on memory spikes
+  gradient_checkpointing: true
+  fp16: true
+  bf16: false
+  completion_only_loss: true        # loss on the answer tokens only, not the ~1.2k-token contract
+  logging_steps: 10                 # log every 10 steps, not every 500 steps (default)
+  eval_steps: 100                   # evaluate every 100 steps, not every 500 steps (default)
+  save_steps: 100                   # save every 100 steps, not every 500 steps (default)
+  seed: 42                          # random seed for reproducibility
+
+hub:
+  adapter_repo: YOUR_HF_USERNAME/qwen2.5-7b-cuad-qlora   # set before pushing
+
+# Local dry run (scripts/dry_run_train.py): same code path, tiny model, 20 steps on the 3050.
+dry_run:
+  model_id: Qwen/Qwen2.5-0.5B-Instruct
+  max_steps: 20
+  max_seq_length: 1024
+  n_examples: 64

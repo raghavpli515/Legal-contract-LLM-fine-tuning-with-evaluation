@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Data & model artifacts (large / license-bound; regenerate with scripts)
+data/*
+!data/.gitkeep
+outputs/
+checkpoints/
+adapters/
+mlruns/
+*.safetensors
+*.gguf
+
+# Secrets
+.env
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Personal notes (not part of the repo)
+important.pdf
+important2.txt
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "legal-ft"
+version = "0.1.0"
+description = "QLoRA fine-tuning of Qwen2.5-7B-Instruct on CUAD with a before/after eval harness (accuracy, hallucination, calibration)."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+# Core = everything the CPU-side pipeline needs (data prep, scoring, tests).
+# torch is deliberately NOT listed: on Windows, pip would pull the CPU wheel.
+# Install it from the CUDA index first (see README), Kaggle ships its own.
+dependencies = [
+    "pyyaml>=6.0",
+    "numpy>=1.26",
+    "rapidfuzz>=3.9",
+    "tqdm>=4.66",
+    "requests>=2.32",
+]
+
+[project.optional-dependencies]
+# Model loading / generation (local 3050 inference, Kaggle eval generation)
+gpu = [
+    "transformers>=5.0,<6",
+    "peft>=0.21,<1",
+    "bitsandbytes>=0.49",
+    "accelerate>=1.10",
+    "huggingface_hub>=1.0",
+]
+# Training loop (Kaggle/Colab)
+train = [
+    "legal-ft[gpu]",
+    "trl>=1.0,<2",
+    "datasets>=4.0",
+]
+app = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "streamlit>=1.40",
+]
+track = [
+    "mlflow>=3.0",
+    "matplotlib>=3.9",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/legal_ft"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = ["gpu: needs a CUDA GPU and model weights (skipped by default)"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

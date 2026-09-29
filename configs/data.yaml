@@ -1,0 +1,37 @@
+# Data pipeline config: CUAD -> contract-level split -> windows -> SFT/eval JSONL.
+
+source:
+  # Official Atticus Project release; the zip contains CUADv1.json (SQuAD-style).
+  url: https://github.com/TheAtticusProject/cuad/raw/main/data.zip
+  # Mirror of the same release (DOI 10.5281/zenodo.4595826), used if GitHub fails.
+  fallback_record: https://zenodo.org/records/4595826
+  sha256: null          # filled in on first download, then enforced
+  raw_dir: data/raw
+
+split:
+  # Split by CONTRACT, never by example: windows from one contract must not
+  # appear in both train and test (leakage). Stratified by contract type,
+  # parsed from the contract title suffix (e.g. "...-DISTRIBUTOR AGREEMENT").
+  seed: 42
+  train: 0.8
+  val: 0.1
+  test: 0.1
+
+# These are metadata-extraction fields, not substantive clauses; excluded from
+# the classification label set (see README "Dataset scope").
+excluded_categories:
+  - Document Name
+  - Parties
+  - Agreement Date
+  - Effective Date
+  - Expiration Date
+  - Renewal Term
+
+windows:
+  # Token counts measured with the base model's tokenizer.
+  tokenizer: Qwen/Qwen2.5-7B-Instruct
+  window_tokens: 1200     # contract text per example; leaves room for prompt + answer in 2048
+  negatives_per_positive: 1   # windows with no answer for the asked category -> "present": false
+  max_evidence_chars: 1500    # truncate very long gold spans in targets
+
+output_dir: data/processed
