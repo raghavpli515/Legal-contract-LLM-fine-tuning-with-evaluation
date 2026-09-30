@@ -13,7 +13,8 @@ generation:
   return_logprobs: true      # needed for calibration
 
 scoring:
-  grounding_threshold: 90    # rapidfuzz partial_ratio on normalized text; >= counts as grounded
+  # grounding: exact whole-word match after normalization (case/punctuation/whitespace);
+  # fuzzy matching let changed numbers and negations through (see eval/grounding.py)
   ece_bins: 10               # number of bins for expected calibration error (ECE) calculation
 
 outputs:

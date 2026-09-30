@@ -89,10 +89,40 @@ on the CPU, bringing 4-bit weights to 4.16 GB and peak memory to 4.70 GB at a 1.
 prompt (~23 tok/s decode on an RTX 3050 Laptop). A plain `device_map={"...": "cpu"}` is not
 enough: accelerate treats it as *offloaded* and copies the table to the GPU on every forward.
 
-_To be written: QLoRA settings and why, eval metric definitions._
+### Evaluation
+
+Generation (GPU) writes one prediction per eval item; scoring (CPU) is deterministic,
+uses no LLM judge, and is unit-tested. Base and fine-tuned models get the same frozen
+items, 4-bit settings and greedy decoding.
+
+| Metric | Definition |
+|---|---|
+| Accuracy | Classification: predicted label is any of the item's gold labels |
+| Macro-F1 | Per-label F1 averaged over the 35 clause types (95% bootstrap CI reported) |
+| **Hallucination rate** | Q&A items where the model invents a clause *or* quotes text not in the excerpt |
+| Fabricated-clause rate | Gold absent, model says present; split into hard (same contract) and easy negatives |
+| Ungrounded-quote rate | Model says present and at least one quote is not in the excerpt |
+| Missed-clause rate | Gold present, model says absent |
+| Evidence F1 | Token F1 of quoted evidence vs gold, on correctly detected clauses |
+| ECE / Brier / AUROC | Calibration of the model's confidence in its own answer (10 equal-width bins) |
+| Format-valid rate | Output parsed exactly as instructed; invalid outputs are scored as wrong, never dropped |
+
+**Grounding is exact, not fuzzy.** A quote counts as grounded only if every word and number
+occurs in the excerpt (case, whitespace and punctuation ignored). Fuzzy matching was tested
+and rejected: at a 90% similarity threshold, 46/46 gold quotes with one number changed and
+46/46 with "shall" turned into "shall not" still passed. The exact rule accepts 148/148 gold
+quotes and rejects all of those alterations.
+
+**Harness checks.** Scoring the gold answers as predictions must give perfect scores, and a
+model that always claims a clause with an invented quote must score 100% hallucination.
+Both run as tests against the real eval files.
+
+_To be written: QLoRA settings and why._
 
 ## Limitations
 
 _To be written. Will cover: not legal advice; CUAD scope (US commercial contracts, English, 2021);
 excerpt-level rather than whole-contract reasoning; metadata categories excluded from classification;
-single training run and seed; calibration measured on the CUAD distribution only._
+single training run and seed; calibration measured on the CUAD distribution only; Q&A
+positives with gold quotes over 1,500 characters are excluded, so very long clauses are
+untested; exact grounding marks a model that silently corrects a contract typo as ungrounded._
