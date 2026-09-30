@@ -5,20 +5,22 @@ source:
   url: https://github.com/TheAtticusProject/cuad/raw/main/data.zip
   # Mirror of the same release (DOI 10.5281/zenodo.4595826), used if GitHub fails.
   fallback_record: https://zenodo.org/records/4595826
-  sha256: null          # filled in on first download, then enforced
+  sha256: f8161d18bea4e9c05e78fa6dda61c19c846fb8087ea969c172753bc2f45b999a  # enforced on every run
   raw_dir: data/raw
 
 split:
   # Split by CONTRACT, never by example: windows from one contract must not
-  # appear in both train and test (leakage). Stratified by contract type,
-  # parsed from the contract title suffix (e.g. "...-DISTRIBUTOR AGREEMENT").
+  # appear in both train and test (leakage). Iterative stratification on the set of
+  # clause categories each contract contains, so rare clauses (e.g. Source Code
+  # Escrow: 13 of 510 contracts) still reach val/test. Contract-type titles are too
+  # inconsistent to stratify on (195 distinct strings).
   seed: 42
   train: 0.8
   val: 0.1
   test: 0.1
 
 # These are metadata-extraction fields, not substantive clauses; excluded from
-# the classification label set (see README "Dataset scope").
+# both tasks (see README "Dataset scope").
 excluded_categories:
   - Document Name
   - Parties
@@ -31,7 +33,27 @@ windows:
   # Token counts measured with the base model's tokenizer.
   tokenizer: Qwen/Qwen2.5-7B-Instruct
   window_tokens: 1200     # contract text per example; leaves room for prompt + answer in 2048
-  negatives_per_positive: 1   # windows with no answer for the asked category -> "present": false
-  max_evidence_chars: 1500    # truncate very long gold spans in targets
+  max_evidence_chars: 1500    # skip QA positives whose gold quotes exceed this (keeps answers < ~400 tokens)
+  # Each QA positive gets one negative for the SAME category ("present": false), so the
+  # model cannot learn "category X is usually present". Hard negatives come from another
+  # part of the same contract (the clause exists, just not in this excerpt); easy ones
+  # from a contract without the clause at all.
+  hard_negative_ratio: 0.5
+
+classification:
+  min_clause_chars: 15        # drop fragment spans
+  max_clause_chars: 1500      # truncate very long clauses (prefix kept)
+
+# Examples actually used. Positives are sampled round-robin across categories so
+# frequent clauses (License Grant, Anti-Assignment) do not dominate.
+sampling:
+  seed: 42
+  max_seq_tokens: 2048        # drop any example longer than this (prompt + answer)
+  train:
+    classification: 1500
+    qa_positives: 1500        # + 1500 matched negatives -> 4500 train examples
+  val:
+    classification: 100
+    qa_positives: 50
 
 output_dir: data/processed

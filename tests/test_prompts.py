@@ -31,13 +31,16 @@ def test_classification_prompt_lists_every_label():
 
 
 def test_qa_target_is_valid_json_with_present_first():
-    target = qa_target(True, 'He said "no competing".')
-    assert json.loads(target) == {"present": True, "evidence": 'He said "no competing".'}
+    target = qa_target(True, ['He said "no competing".', "Second passage."])
+    assert json.loads(target) == {
+        "present": True,
+        "evidence": ['He said "no competing".', "Second passage."],
+    }
     assert target.startswith('{"present"')
 
 
 def test_qa_target_absent_drops_evidence():
-    assert json.loads(qa_target(False, "stray")) == {"present": False, "evidence": None}
+    assert json.loads(qa_target(False, ["stray"])) == {"present": False, "evidence": []}
 
 
 def test_qa_messages_contain_excerpt_and_category():

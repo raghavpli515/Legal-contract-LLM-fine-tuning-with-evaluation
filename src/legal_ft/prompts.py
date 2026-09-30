@@ -56,19 +56,22 @@ def classification_target(label: str) -> str:
 
 
 def build_qa_messages(excerpt: str, category: str, description: str = "") -> list[Message]:
-    detail = f" ({description})" if description else ""
+    detail = f"Category definition: {description}\n" if description else ""
     user = (
         f"Contract excerpt:\n\"\"\"\n{excerpt}\n\"\"\"\n\n"
-        f"Question: Does this excerpt contain a \"{category}\" clause{detail}? "
-        "If yes, quote the relevant text verbatim.\n\n"
-        'Respond with JSON only: {"present": true|false, "evidence": "<verbatim quote>" | null}'
+        f"Question: Does this excerpt contain a \"{category}\" clause? "
+        "If yes, quote the relevant text verbatim.\n"
+        f"{detail}\n"
+        'Respond with JSON only: {"present": true|false, "evidence": ["<verbatim quote>", ...]}. '
+        "Use an empty evidence list when the clause is not present."
     )
     return [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user}]
 
 
-def qa_target(present: bool, evidence: str | None) -> str:
+def qa_target(present: bool, evidence: list[str]) -> str:
     """Canonical QA completion. ``present`` comes first so its token probability
-    can be read off as the model's confidence (see eval/generate.py)."""
-    if not present:
-        evidence = None
-    return json.dumps({"present": present, "evidence": evidence}, ensure_ascii=False)
+    can be read off as the model's confidence (see eval/generate.py). A clause can
+    span several separate passages, so evidence is a list of verbatim quotes."""
+    return json.dumps(
+        {"present": present, "evidence": list(evidence) if present else []}, ensure_ascii=False
+    )
