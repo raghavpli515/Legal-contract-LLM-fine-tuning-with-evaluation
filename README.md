@@ -117,7 +117,29 @@ quotes and rejects all of those alterations.
 model that always claims a clause with an invented quote must score 100% hallucination.
 Both run as tests against the real eval files.
 
-_To be written: QLoRA settings and why._
+### Training (QLoRA)
+
+TRL `SFTTrainer` on prompt/completion pairs, with loss on the answer tokens only. A Q&A
+example is ~1,500 tokens of contract and ~20–300 tokens of answer; training on the whole
+sequence would mostly teach the model to reproduce contract text.
+
+| Setting | Value | Why |
+|---|---|---|
+| Base model | Qwen2.5-7B-Instruct, 4-bit NF4 + double quantization | Frozen base at ~5 GB fits a free T4; NF4 bins match normally distributed weights |
+| LoRA | r=16, alpha=32, dropout 0.05, all linear layers | QLoRA paper: covering every linear layer matters more than rank; alpha/r = 2 |
+| Optimizer | paged AdamW 8-bit, lr 2e-4, cosine, 3% warmup, 1 epoch | Standard QLoRA; paging absorbs memory spikes; 1 epoch limits overfitting on 4.5k examples |
+| Precision | fp16 autocast, fp32 LoRA weights | The T4 has no bf16 |
+| Batch | 1 × 16 gradient accumulation, max length 2,048 | No example is truncated (longest: 1,647 tokens) |
+
+Four library defaults would have broken this silently, and each is pinned and covered by a test
+(`tests/test_train_config.py`): TRL's `max_length` defaults to 1024 and would cut answers
+off; TRL casts LoRA weights to bf16 for quantized models (cast back to fp32 for the T4);
+`bf16` auto-enables on Ampere GPUs, so the local dry run would not match the T4; and an eval
+batch of 8 at 2,048 tokens with a 152k vocabulary needs ~10 GB for logits alone.
+
+Before any GPU hours are spent, `scripts/dry_run_train.py` runs the same code path on
+Qwen2.5-0.5B for 20 steps locally. It checks that only answer tokens carry loss, that nothing
+is truncated, and that the saved adapter reloads and answers in valid JSON.
 
 ## Limitations
 

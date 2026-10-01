@@ -57,3 +57,10 @@ sampling:
     qa_positives: 50
 
 output_dir: data/processed
+# Built files are deterministic; the build checks these so Kaggle trains/evaluates on
+# byte-identical data (a different tokenizers version would change the windows).
+output_sha256:
+    train: 8a1a9ae4f2931ca98698c883d5d3a86f5f16dd609509acbabfceda7631de8d9f
+    val: 3a12df963a5e49f5979ddd7cf183079f81128c7c411f54630f3f1418e5636f8f
+    eval_classification: bd108c027f3069b0585e13e90fe5093cff41c595400503a4b04329b31fb36ff9
+    eval_qa: a47e4fb4034c4288a805230aa0ce2970364489d44b8e332e3b075a38917745eb

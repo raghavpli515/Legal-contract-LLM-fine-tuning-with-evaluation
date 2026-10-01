@@ -202,7 +202,7 @@ def build() -> dict:
     load_dotenv()
     from tokenizers import Tokenizer
 
-    from legal_ft.data.download import fetch_cuad
+    from legal_ft.data.download import fetch_cuad, sha256_of
 
     dcfg, ecfg = load_config("data"), load_config("eval")
     wcfg, ccfg, scfg = dcfg["windows"], dcfg["classification"], dcfg["sampling"]
@@ -279,8 +279,12 @@ def build() -> dict:
     )
     files["eval_qa"] = finalize(qa_set("test", n_pos, es["n_qa"] - n_pos, r), "test", r)
 
+    checksums = {}
     for name, records in files.items():
         write_jsonl(out_dir / f"{name}.jsonl", records)
+        checksums[name] = sha256_of(out_dir / f"{name}.jsonl")
+    expected = dcfg.get("output_sha256") or {}
+    mismatched = sorted(k for k, v in expected.items() if checksums.get(k) != v)
     (out_dir / "categories.json").write_text(
         json.dumps({"labels": labels, "descriptions": descriptions}, indent=2), encoding="utf-8"
     )
@@ -291,6 +295,8 @@ def build() -> dict:
         "pool_classification": {s: len(v) for s, v in cls_by_split.items()},
         "pool_qa_positives": {s: len(v) for s, v in pos_by_split.items()},
         "skipped": dict(skipped),
+        "sha256": checksums,
+        "sha256_mismatch": mismatched,
         "files": {
             name: {
                 "n": len(recs),
@@ -304,6 +310,9 @@ def build() -> dict:
         },
     }
     (out_dir / "stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
+    if mismatched:
+        print(f"WARNING: built files differ from configs/data.yaml output_sha256: {mismatched}. "
+              "Results would not be comparable to the reference build.")
     return stats
 
 

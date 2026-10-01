@@ -20,11 +20,12 @@ lora:
 training:
   max_seq_length: 2048
   per_device_train_batch_size: 1    # batch size per GPU, gradient accumulation steps will multiply this to effective batch size
+  per_device_eval_batch_size: 1     # default is 8: 8 x 2048 tokens x 152k-vocab logits ~ 10GB, OOM on a T4
   gradient_accumulation_steps: 16   # effective batch 16
   learning_rate: 2.0e-4
   num_train_epochs: 1
   lr_scheduler_type: cosine
-  warmup_ratio: 0.03                # warmup steps = 0.03 * (num_train_epochs * num_training_examples / effective_batch_size)
+  warmup_ratio: 0.03                # warmup steps = 0.03 * total optimizer steps (passed to SFTConfig as warmup_steps=0.03)
   optim: paged_adamw_8bit           # paged: spills optimizer state to CPU on memory spikes
   gradient_checkpointing: true
   fp16: true
@@ -39,8 +40,14 @@ hub:
   adapter_repo: YOUR_HF_USERNAME/qwen2.5-7b-cuad-qlora   # set before pushing
 
 # Local dry run (scripts/dry_run_train.py): same code path, tiny model, 20 steps on the 3050.
+# Values here override `training` above.
 dry_run:
   model_id: Qwen/Qwen2.5-0.5B-Instruct
   max_steps: 20
-  max_seq_length: 1024
-  n_examples: 64
+  n_train: 80                       # 20 steps x effective batch 4
+  n_val: 8
+  overrides:
+    gradient_accumulation_steps: 4
+    logging_steps: 1
+    eval_steps: 10
+    save_steps: 20
