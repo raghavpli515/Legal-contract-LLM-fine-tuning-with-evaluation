@@ -191,7 +191,8 @@ def count_tokens(record: dict, tokenizer) -> int:
 
 def write_jsonl(path: Path, records: Iterable[dict]) -> int:
     n = 0
-    with path.open("w", encoding="utf-8") as f:
+    # newline=\n: identical bytes on Windows and Linux, so checksums are portable
+    with path.open("w", encoding="utf-8", newline="\n") as f:
         for r in records:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
             n += 1
@@ -286,9 +287,10 @@ def build() -> dict:
     expected = dcfg.get("output_sha256") or {}
     mismatched = sorted(k for k, v in expected.items() if checksums.get(k) != v)
     (out_dir / "categories.json").write_text(
-        json.dumps({"labels": labels, "descriptions": descriptions}, indent=2), encoding="utf-8"
+        json.dumps({"labels": labels, "descriptions": descriptions}, indent=2), encoding="utf-8",
+        newline="\n",
     )
-    (out_dir / "splits.json").write_text(json.dumps(split_of, indent=2), encoding="utf-8")
+    (out_dir / "splits.json").write_text(json.dumps(split_of, indent=2), encoding="utf-8", newline="\n")
 
     stats = {
         "contracts_per_split": Counter(split_of.values()),
@@ -309,7 +311,7 @@ def build() -> dict:
             for name, recs in files.items()
         },
     }
-    (out_dir / "stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
+    (out_dir / "stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8", newline="\n")
     if mismatched:
         print(f"WARNING: built files differ from configs/data.yaml output_sha256: {mismatched}. "
               "Results would not be comparable to the reference build.")

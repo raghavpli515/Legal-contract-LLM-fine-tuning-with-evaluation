@@ -7,7 +7,7 @@ name = "legal-ft"
 version = "0.1.0"
 description = "QLoRA fine-tuning of Qwen2.5-7B-Instruct on CUAD with a before/after eval harness (accuracy, hallucination, calibration)."
 readme = "README.md"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 # Core = everything the CPU-side pipeline needs (data prep, scoring, tests).
 # torch is deliberately NOT listed: on Windows, pip would pull the CPU wheel.
