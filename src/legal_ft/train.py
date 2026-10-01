@@ -99,6 +99,10 @@ def build_trainer(cfg: dict, model_id: str, train_ds, eval_ds, output_dir: Path,
     for p in trainer.model.parameters():  # undo TRL's bf16 cast of the adapters (T4)
         if p.requires_grad:
             p.data = p.data.float()
+    # The model is pinned to GPU 0. On a multi-GPU machine (Kaggle "T4 x2") Trainer would
+    # wrap it in nn.DataParallel, which cannot replicate a 4-bit PEFT model (inputs land on
+    # cuda:1, weights stay on cuda:0). Same idiom transformers uses for model-parallel models.
+    trainer.args._n_gpu = 1
     return trainer
 
 
