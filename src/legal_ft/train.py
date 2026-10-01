@@ -16,10 +16,12 @@ Notes on the TRL 1.x / transformers 5 API, verified against the installed packag
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 
 import torch
+from transformers import TrainerCallback
 
 from legal_ft.modeling import bnb_config, load_tokenizer
 
@@ -76,6 +78,47 @@ def lora_config(cfg: dict):
     )
 
 
+class ProgressPrinter(TrainerCallback):
+    """Flushed, timestamped progress lines. Background Kaggle runs show no progress bar, so
+    without this a stalled or very slow run looks identical to a healthy one for hours."""
+
+    def __init__(self, first_microbatches: int = 3):
+        self.first_microbatches = first_microbatches
+
+    @staticmethod
+    def _gpu_gb() -> float:
+        return torch.cuda.max_memory_reserved() / 1024**3 if torch.cuda.is_available() else 0.0
+
+    def _print(self, msg: str) -> None:
+        print(f"[progress {time.perf_counter() - self.t0:7.0f}s] {msg}", flush=True)
+
+    def on_train_begin(self, args, state, control, **kwargs):
+        self.t0 = self.last = time.perf_counter()
+        self.microbatches = 0
+        self._print(f"training {state.max_steps} optimizer steps x {args.gradient_accumulation_steps} "
+                    f"micro-batches of {args.per_device_train_batch_size} (GPUs used: {args.n_gpu})")
+
+    def on_substep_end(self, args, state, control, **kwargs):
+        self.microbatches += 1
+        if state.global_step == 0 and self.microbatches <= self.first_microbatches:
+            self._print(f"step 1, micro-batch {self.microbatches} done | GPU peak {self._gpu_gb():.1f} GB")
+
+    def on_step_end(self, args, state, control, **kwargs):
+        now = time.perf_counter()
+        step_time, self.last = now - self.last, now
+        step = state.global_step
+        if step <= 3 or step % args.logging_steps == 0:
+            eta_min = (now - self.t0) / step * (state.max_steps - step) / 60
+            self._print(f"step {step}/{state.max_steps} | {step_time:.0f}s/step | ETA {eta_min:.0f} min "
+                        f"| GPU peak {self._gpu_gb():.1f} GB")
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        keep = {k: round(v, 4) for k, v in (logs or {}).items()
+                if k in ("loss", "eval_loss", "grad_norm", "learning_rate") and isinstance(v, float)}
+        if keep:
+            self._print(f"step {state.global_step} {keep}")
+
+
 def build_trainer(cfg: dict, model_id: str, train_ds, eval_ds, output_dir: Path,
                   max_steps: int | None = None):
     from transformers import AutoModelForCausalLM
@@ -95,6 +138,7 @@ def build_trainer(cfg: dict, model_id: str, train_ds, eval_ds, output_dir: Path,
         eval_dataset=eval_ds,
         processing_class=load_tokenizer(model_id),
         peft_config=lora_config(cfg),
+        callbacks=[ProgressPrinter()],
     )
     for p in trainer.model.parameters():  # undo TRL's bf16 cast of the adapters (T4)
         if p.requires_grad:
@@ -102,7 +146,14 @@ def build_trainer(cfg: dict, model_id: str, train_ds, eval_ds, output_dir: Path,
     # The model is pinned to GPU 0. On a multi-GPU machine (Kaggle "T4 x2") Trainer would
     # wrap it in nn.DataParallel, which cannot replicate a 4-bit PEFT model (inputs land on
     # cuda:1, weights stay on cuda:0). Same idiom transformers uses for model-parallel models.
+    # Trainer caches its batch size (per_device x n_gpu) at construction, so reset that too;
+    # otherwise a 2-GPU host silently trains with micro-batches of 2 on one GPU.
+    # (The Kaggle notebook also hides the second GPU via CUDA_VISIBLE_DEVICES.)
     trainer.args._n_gpu = 1
+    trainer._train_batch_size = trainer.args.train_batch_size
+    expected = cfg["training"]["per_device_train_batch_size"]
+    if trainer._train_batch_size != expected:
+        raise RuntimeError(f"micro-batch is {trainer._train_batch_size}, expected {expected}")
     return trainer
 
 

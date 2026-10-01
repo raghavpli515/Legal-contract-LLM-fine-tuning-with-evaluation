@@ -23,7 +23,7 @@ dependencies = [
 [project.optional-dependencies]
 # Model loading / generation (local 3050 inference, Kaggle eval generation)
 gpu = [
-    "transformers>=5.0,<6",
+    "transformers>=5.17,<6",   # dry run verified on 5.17; Kaggle preinstalls older 5.x
     "peft>=0.21,<1",
     "bitsandbytes>=0.49",
     "accelerate>=1.10",
