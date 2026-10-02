@@ -15,18 +15,56 @@ and **calibration**, using identical quantization and decoding.
 
 ## Results
 
-_Pending: filled in from `results/comparison.md` after milestone 1._
+Qwen2.5-7B-Instruct (4-bit) before and after QLoRA, on 400 held-out items from 50 test
+contracts never seen in training. Same quantization, prompts and greedy decoding for both.
 
 | Metric | Base (zero-shot) | Fine-tuned (QLoRA) |
 |---|---|---|
-| Classification accuracy | – | – |
-| Classification macro-F1 | – | – |
-| Fabricated-clause rate ↓ | – | – |
-| Ungrounded-quote rate ↓ | – | – |
-| Evidence token-F1 | – | – |
-| ECE ↓ | – | – |
-| Brier score ↓ | – | – |
-| Format-valid rate | – | – |
+| Clause classification accuracy ↑ | 61.5% [55.5, 67.5] | 80.0% [74.5, 85.5] |
+| Clause classification macro-F1 ↑ | 0.584 [0.507, 0.636] | 0.795 [0.719, 0.838] |
+| Q&A presence accuracy ↑ | 70.5% [64.0, 76.5] | 94.0% [90.5, 97.0] |
+| **Hallucination rate** ↓ | 2.0% [0.5, 4.0] | 5.0% [2.5, 8.0] |
+|   · after manual audit ↓ | 1.0% [0.0, 2.5] | 3.5% [1.5, 6.5] |
+| Fabricated-clause rate ↓ | 2.0% [0.0, 5.1] | 7.0% [2.3, 12.8] |
+|   · on hard negatives (same contract) ↓ | 4.1% | 6.1% |
+|   · on easy negatives (other contract) ↓ | 0.0% | 7.8% |
+|   · after manual audit ↓ | 0.0% [0.0, 0.0] | 5.0% [1.1, 10.0] |
+| Ungrounded-quote rate ↓ | 4.7% | 3.0% |
+| Missed-clause rate ↓ | 57.0% | 5.0% |
+| Evidence token-F1 ↑ | 0.742 | 0.816 |
+| Q&A calibration error (ECE) ↓ | 0.283 | 0.026 |
+| Q&A Brier score ↓ | 0.286 | 0.055 |
+| Q&A confidence AUROC ↑ | 0.818 | 0.823 |
+| Classification ECE ↓ | 0.289 | 0.071 |
+| Classification format-valid ↑ | 96.0% | 100.0% |
+| Q&A format-valid (JSON) ↑ | 99.0% | 99.5% |
+
+n = 200 classification items, 200 Q&A items (held-out test contracts). Brackets: 95% bootstrap CI.
+
+**What changed.** Fine-tuning mostly fixed *recall and calibration*:
+- The base model is cautious: it says "not present" for **57%** of clauses that are there,
+  usually with near-certainty (51 of its 57 misses had P(present) < 5%). Fine-tuned: **5%**.
+- Calibration error drops about **10×** (Q&A ECE 0.283 → 0.026, Brier 0.286 → 0.055), so
+  the confidence shown in the demo means something.
+- Clause classification: **61.5% → 80.0%** accuracy, macro-F1 0.58 → 0.80, and every
+  output is a valid label (96% → 100%).
+
+**What got worse.** The hallucination rate rises from **1.0% to 3.5%** after manual audit
+(2.0% → 5.0% raw; the confidence intervals overlap). Having learned to find clauses, the
+fine-tuned model sometimes labels a real passage as the wrong clause type, typically on a
+surface cue: a "minimum period of 12 months" contract term read as a Minimum Commitment.
+Every one of its fabricated-clause answers quotes the contract verbatim, so a reader can
+check the quote and see it does not fit; only one answer (0.5%) invents wording.
+
+**Manual audit** ([`results/audit.json`](results/audit.json)). Every flagged hallucination
+in both runs (14 items) was checked by hand against CUAD's category definitions:
+- 2 "fabricated clauses", flagged identically for both models, are **real clauses CUAD did
+  not annotate** (e.g. a second "third party beneficiary" sentence in a recital).
+  Hard negatives taken from elsewhere in the same contract carry this label noise.
+- 1 "ungrounded quote" is faithful: the model dropped a page number that a PDF page break
+  left mid-sentence in CUAD's text.
+- The frozen metric is reported unchanged; audited rates are separate rows, and the report
+  refuses to compute them unless every flagged item has a verdict.
 
 ## Repo layout
 
@@ -143,8 +181,20 @@ is truncated, and that the saved adapter reloads and answers in valid JSON.
 
 ## Limitations
 
-_To be written. Will cover: not legal advice; CUAD scope (US commercial contracts, English, 2021);
-excerpt-level rather than whole-contract reasoning; metadata categories excluded from classification;
-single training run and seed; calibration measured on the CUAD distribution only; Q&A
-positives with gold quotes over 1,500 characters are excluded, so very long clauses are
-untested; exact grounding marks a model that silently corrects a contract typo as ungrounded._
+- **Not legal advice.** A research and portfolio project; outputs can be wrong.
+- **Precision/recall trade-off.** Fine-tuning raised recall (95%) at the cost of more
+  wrong-clause-type answers (5% of absent cases after audit vs 0% for the base model).
+  Training data with more near-miss negatives, or a confidence threshold, would trade some
+  of that recall back.
+- **Small eval set.** 200 items per task from 50 contracts; rare clause types have 1–7 test
+  items, so per-class numbers are noisy (95% bootstrap CIs are reported for headline metrics).
+- **Label noise.** CUAD does not always annotate every occurrence of a clause; hard
+  negatives inherit those gaps (2 of 14 flagged items in the audit).
+- **Excerpt-level, not whole-contract.** Each question sees a ~1,200-token excerpt; the model
+  cannot answer "does this contract have X?" across a full agreement without retrieval.
+- **Dataset scope.** CUAD: 510 US commercial contracts in English, labelled in 2021.
+  Metadata fields (parties, dates) are excluded; Q&A positives whose gold quotes exceed
+  1,500 characters were dropped, so very long clauses are untested.
+- **One run.** A single training run and seed; no hyperparameter search or rank ablation yet.
+- **Exact grounding is strict.** A model that silently fixes a typo, or drops a stray page
+  number, is marked ungrounded (seen once in the audit).

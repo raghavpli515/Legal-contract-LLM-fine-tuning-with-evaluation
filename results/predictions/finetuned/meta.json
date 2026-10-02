@@ -1,0 +1,21 @@
+{
+  "run_name": "finetuned",
+  "model": "Qwen/Qwen2.5-7B-Instruct",
+  "adapter": "outputs/qlora/adapter",
+  "embed_on_cpu": true,
+  "decoding": {
+    "do_sample": false,
+    "temperature": null,
+    "top_p": null,
+    "top_k": null,
+    "repetition_penalty": 1.0
+  },
+  "limit": null,
+  "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+  "python": "3.11.16",
+  "torch": "2.14.0+cu130",
+  "transformers": "5.17.0",
+  "peft": "0.21.0",
+  "bitsandbytes": "0.50.2",
+  "started": "2026-10-02 11:59:18"
+}

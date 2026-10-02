@@ -1,0 +1,82 @@
+{
+  "classification": {
+    "n": 200,
+    "accuracy": 0.615,
+    "macro_f1": 0.5841825976699926,
+    "format_valid_rate": 0.96,
+    "n_with_confidence": 200,
+    "ece": 0.2888092563294849,
+    "brier": 0.2860007871876412,
+    "auroc": 0.8096293949952487,
+    "mean_confidence": 0.9038092563294852,
+    "accuracy_ci95": [
+      0.555,
+      0.675
+    ],
+    "macro_f1_ci95": [
+      0.5067995804467738,
+      0.6355397606593782
+    ]
+  },
+  "qa": {
+    "n": 200,
+    "presence_accuracy": 0.705,
+    "hallucination_rate": 0.02,
+    "fabricated_rate": 0.02,
+    "ungrounded_rate": 0.046511627906976744,
+    "missed_rate": 0.57,
+    "present_without_quote_rate": 0.044444444444444446,
+    "evidence_f1": 0.7421982751864982,
+    "format_valid_rate": 0.99,
+    "n_with_confidence": 200,
+    "ece": 0.28295976528647215,
+    "brier": 0.2855171704217623,
+    "auroc": 0.8177064551027767,
+    "mean_confidence": 0.9879597652864721,
+    "fabricated_rate_same_contract": 0.04081632653061224,
+    "fabricated_rate_other_contract": 0.0,
+    "hallucination_rate_ci95": [
+      0.005,
+      0.04
+    ],
+    "fabricated_rate_ci95": [
+      0.0,
+      0.05102040816326531
+    ],
+    "presence_accuracy_ci95": [
+      0.64,
+      0.765
+    ],
+    "hallucination_rate_audited": 0.01,
+    "fabricated_rate_audited": 0.0,
+    "hallucination_rate_audited_ci95": [
+      0.0,
+      0.025
+    ],
+    "fabricated_rate_audited_ci95": [
+      0.0,
+      0.0
+    ]
+  },
+  "meta": {
+    "run_name": "base",
+    "model": "Qwen/Qwen2.5-7B-Instruct",
+    "adapter": null,
+    "embed_on_cpu": true,
+    "decoding": {
+      "do_sample": false,
+      "temperature": null,
+      "top_p": null,
+      "top_k": null,
+      "repetition_penalty": 1.0
+    },
+    "limit": null,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "python": "3.11.16",
+    "torch": "2.14.0+cu130",
+    "transformers": "5.17.0",
+    "peft": "0.21.0",
+    "bitsandbytes": "0.50.2",
+    "started": "2026-10-02 11:05:38"
+  }
+}

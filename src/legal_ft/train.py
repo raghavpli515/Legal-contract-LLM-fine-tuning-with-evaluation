@@ -113,7 +113,8 @@ class ProgressPrinter(TrainerCallback):
                         f"| GPU peak {self._gpu_gb():.1f} GB")
 
     def on_log(self, args, state, control, logs=None, **kwargs):
-        keep = {k: round(v, 4) for k, v in (logs or {}).items()
+        # 3 significant figures: rounding to decimals showed a decaying lr of 4e-5 as 0.0
+        keep = {k: float(f"{v:.3g}") for k, v in (logs or {}).items()
                 if k in ("loss", "eval_loss", "grad_norm", "learning_rate") and isinstance(v, float)}
         if keep:
             self._print(f"step {state.global_step} {keep}")

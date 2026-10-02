@@ -1,0 +1,21 @@
+{
+  "_about": "Manual audit of every Q&A item the frozen scorer flagged as a hallucination (fabricated clause or ungrounded quote), judged against CUAD's category definitions. Verdicts: real_error = counts as a hallucination; label_gap = the quoted passage is a genuine clause of that type that CUAD did not annotate in this excerpt; scorer_artifact = the quote is faithful and the exact-match scorer misfired. The frozen metric is reported unchanged; audited rates are additional rows.",
+  "base": {
+    "test-qa-00014": {"flag": "ungrounded", "verdict": "real_error", "note": "Exclusivity: stitches two separate (b) clauses into one quote without an ellipsis; the combined text is not in the contract."},
+    "test-qa-00006": {"flag": "ungrounded", "verdict": "real_error", "note": "No-Solicit Of Customers: jumps from clause (a) to (b) without an ellipsis (stitched quote)."},
+    "test-qa-00133": {"flag": "fabricated", "verdict": "label_gap", "note": "License Grant: 'TouchStar shall grant to Reseller those Licenses necessary...' is a license grant; CUAD labelled other grants in this contract but not this one."},
+    "test-qa-00121": {"flag": "fabricated", "verdict": "label_gap", "note": "Third Party Beneficiary: the WHEREAS recital names Investment Advisor as a third party beneficiary; CUAD labelled only the operative sentence elsewhere."}
+  },
+  "finetuned": {
+    "test-qa-00188": {"flag": "fabricated", "verdict": "real_error", "note": "Insurance: quotes salary and operating-expense provisions; not an insurance requirement."},
+    "test-qa-00136": {"flag": "fabricated", "verdict": "real_error", "note": "Competitive Restriction Exception: quotes link-placement terms; not a carve-out from a non-compete, exclusivity or no-solicit."},
+    "test-qa-00130": {"flag": "fabricated", "verdict": "real_error", "note": "Non-Disparagement: quotes approval rights over advertising content."},
+    "test-qa-00173": {"flag": "fabricated", "verdict": "real_error", "note": "Termination For Convenience (borderline): termination after a casualty if repairs are not elected; not termination without cause."},
+    "test-qa-00165": {"flag": "fabricated", "verdict": "real_error", "note": "Minimum Commitment: quotes a 'minimum period of 12 months' contract term; keyword confusion, not a purchase minimum."},
+    "test-qa-00133": {"flag": "fabricated", "verdict": "label_gap", "note": "License Grant: same unlabelled grant as the base run."},
+    "test-qa-00121": {"flag": "fabricated", "verdict": "label_gap", "note": "Third Party Beneficiary: same unlabelled recital as the base run."},
+    "test-qa-00062": {"flag": "ungrounded", "verdict": "scorer_artifact", "note": "Non-Compete: quote is verbatim except it omits a page number ('6') that a PDF page break left mid-sentence in CUAD's text."},
+    "test-qa-00065": {"flag": "ungrounded", "verdict": "real_error", "note": "Minimum Commitment: after 55 verbatim words, invents 'Milyi on behalf of Bellicum' and a different continuation."},
+    "test-qa-00006": {"flag": "ungrounded", "verdict": "real_error", "note": "No-Solicit Of Customers: same stitched (a)->(b) quote as the base run."}
+  }
+}

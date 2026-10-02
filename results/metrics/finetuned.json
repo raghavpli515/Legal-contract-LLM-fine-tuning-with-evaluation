@@ -1,0 +1,82 @@
+{
+  "classification": {
+    "n": 200,
+    "accuracy": 0.8,
+    "macro_f1": 0.7952784796902446,
+    "format_valid_rate": 1.0,
+    "n_with_confidence": 200,
+    "ece": 0.07107386473201203,
+    "brier": 0.12039174129528166,
+    "auroc": 0.8503125,
+    "mean_confidence": 0.7598014298646275,
+    "accuracy_ci95": [
+      0.745,
+      0.855
+    ],
+    "macro_f1_ci95": [
+      0.7190765198095376,
+      0.8376435265555126
+    ]
+  },
+  "qa": {
+    "n": 200,
+    "presence_accuracy": 0.94,
+    "hallucination_rate": 0.05,
+    "fabricated_rate": 0.07,
+    "ungrounded_rate": 0.0297029702970297,
+    "missed_rate": 0.05,
+    "present_without_quote_rate": 0.00980392156862745,
+    "evidence_f1": 0.8162337319446178,
+    "format_valid_rate": 0.995,
+    "n_with_confidence": 200,
+    "ece": 0.025575124801835023,
+    "brier": 0.0552429662828749,
+    "auroc": 0.8231382978723404,
+    "mean_confidence": 0.9191562266333494,
+    "fabricated_rate_same_contract": 0.061224489795918366,
+    "fabricated_rate_other_contract": 0.0784313725490196,
+    "hallucination_rate_ci95": [
+      0.025,
+      0.08
+    ],
+    "fabricated_rate_ci95": [
+      0.023255813953488372,
+      0.12844036697247707
+    ],
+    "presence_accuracy_ci95": [
+      0.905,
+      0.97
+    ],
+    "hallucination_rate_audited": 0.035,
+    "fabricated_rate_audited": 0.05,
+    "hallucination_rate_audited_ci95": [
+      0.015,
+      0.065
+    ],
+    "fabricated_rate_audited_ci95": [
+      0.01098901098901099,
+      0.1
+    ]
+  },
+  "meta": {
+    "run_name": "finetuned",
+    "model": "Qwen/Qwen2.5-7B-Instruct",
+    "adapter": "outputs/qlora/adapter",
+    "embed_on_cpu": true,
+    "decoding": {
+      "do_sample": false,
+      "temperature": null,
+      "top_p": null,
+      "top_k": null,
+      "repetition_penalty": 1.0
+    },
+    "limit": null,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "python": "3.11.16",
+    "torch": "2.14.0+cu130",
+    "transformers": "5.17.0",
+    "peft": "0.21.0",
+    "bitsandbytes": "0.50.2",
+    "started": "2026-10-02 11:59:18"
+  }
+}

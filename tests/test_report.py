@@ -56,3 +56,27 @@ def test_greedy_logprob_recorder_records_chosen_token():
     assert rec(None, scores) is scores  # must not alter the scores
     expected = torch.log_softmax(scores, dim=-1).max(dim=-1).values
     assert torch.allclose(rec.steps[0], expected)
+
+
+def _qa_row(i, gold_present, fabricated=False, ungrounded=False):
+    return {"id": f"q{i}", "gold_present": gold_present, "fabricated": fabricated,
+            "ungrounded": ungrounded, "hallucinated": fabricated or ungrounded}
+
+
+def test_audit_excludes_label_gaps_and_scorer_artifacts():
+    from legal_ft.eval.report import apply_audit
+
+    rows = [_qa_row(0, False, fabricated=True), _qa_row(1, False, fabricated=True),
+            _qa_row(2, True, ungrounded=True), _qa_row(3, True)]
+    audit = {"q0": {"verdict": "label_gap"}, "q1": {"verdict": "real_error"},
+             "q2": {"verdict": "scorer_artifact"}}
+    out = apply_audit(rows, audit, n_boot=20)
+    assert out["fabricated_rate_audited"] == 0.5      # q1 only, of 2 gold-absent items
+    assert out["hallucination_rate_audited"] == 0.25  # q1 only, of 4 items
+
+
+def test_audit_must_cover_every_flagged_item():
+    from legal_ft.eval.report import apply_audit
+
+    with pytest.raises(ValueError, match="lack an audit verdict"):
+        apply_audit([_qa_row(0, False, fabricated=True)], {}, n_boot=20)

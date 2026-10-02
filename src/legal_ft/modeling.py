@@ -50,6 +50,12 @@ def _move_embedding_to_cpu(model) -> None:
     hook = getattr(emb, "_hf_hook", None)
     weight = hook.weights_map["weight"] if hook is not None else emb.weight
     model.set_input_embeddings(CpuEmbedding(weight.detach().to("cpu")))
+    # CpuEmbedding manages its own device; it is no longer an accelerate-offloaded module.
+    # A stale "cpu" entry in hf_device_map makes PeftModel.from_pretrained re-dispatch the
+    # model as if it were offloaded, which fails (needs an offload_dir).
+    if getattr(model, "hf_device_map", None):
+        model.hf_device_map = {k: v for k, v in model.hf_device_map.items()
+                               if v not in ("cpu", "disk")}
 
 
 def bnb_config(quant: dict[str, Any] | None = None, cpu_offload: bool = False):

@@ -14,7 +14,10 @@ import json
 from pathlib import Path
 
 from legal_ft.config import REPO_ROOT, load_config
-from legal_ft.eval.metrics import score_run
+from legal_ft.eval.metrics import bootstrap_ci, score_run
+
+AUDIT_PATH = REPO_ROOT / "results" / "audit.json"
+NOT_A_HALLUCINATION = {"fabricated": "label_gap", "ungrounded": "scorer_artifact"}
 
 # (task, metric key, label, kind) - kind: "pct" or "num"; arrows mark the better direction
 TABLE = [
@@ -22,9 +25,11 @@ TABLE = [
     ("classification", "macro_f1", "Clause classification macro-F1 ↑", "num"),
     ("qa", "presence_accuracy", "Q&A presence accuracy ↑", "pct"),
     ("qa", "hallucination_rate", "**Hallucination rate** ↓", "pct"),
+    ("qa", "hallucination_rate_audited", "  · after manual audit ↓", "pct"),
     ("qa", "fabricated_rate", "Fabricated-clause rate ↓", "pct"),
     ("qa", "fabricated_rate_same_contract", "  · on hard negatives (same contract) ↓", "pct"),
     ("qa", "fabricated_rate_other_contract", "  · on easy negatives (other contract) ↓", "pct"),
+    ("qa", "fabricated_rate_audited", "  · after manual audit ↓", "pct"),
     ("qa", "ungrounded_rate", "Ungrounded-quote rate ↓", "pct"),
     ("qa", "missed_rate", "Missed-clause rate ↓", "pct"),
     ("qa", "evidence_f1", "Evidence token-F1 ↑", "num"),
@@ -44,6 +49,33 @@ def _fmt(value, kind: str, ci=None) -> str:
         text = f"{100 * value:.1f}%"
         return text + (f" [{100 * ci[0]:.1f}, {100 * ci[1]:.1f}]" if ci else "")
     return f"{value:.3f}" + (f" [{ci[0]:.3f}, {ci[1]:.3f}]" if ci else "")
+
+
+def apply_audit(rows: list[dict], audit: dict[str, dict], n_boot: int) -> dict:
+    """Audited rates: a flag judged a CUAD label gap (fabricated) or a scorer artifact
+    (ungrounded) is not counted. Every flagged item must have a verdict."""
+    flagged = [r["id"] for r in rows if r["hallucinated"]]
+    missing = [i for i in flagged if i not in audit]
+    if missing:
+        raise ValueError(f"{len(missing)} flagged items lack an audit verdict: {missing}")
+    for r in rows:
+        verdict = audit.get(r["id"], {}).get("verdict")
+        r["fabricated_audited"] = r["fabricated"] and verdict != NOT_A_HALLUCINATION["fabricated"]
+        r["ungrounded_audited"] = r["ungrounded"] and verdict != NOT_A_HALLUCINATION["ungrounded"]
+        r["hallucinated_audited"] = r["fabricated_audited"] or r["ungrounded_audited"]
+
+    def aggregate(rs: list[dict]) -> dict:
+        absent = [r for r in rs if not r["gold_present"]]
+        return {
+            "hallucination_rate_audited": sum(r["hallucinated_audited"] for r in rs) / len(rs),
+            "fabricated_rate_audited": sum(r["fabricated_audited"] for r in absent) / len(absent)
+            if absent else None,
+        }
+
+    out = aggregate(rows)
+    for key, ci in bootstrap_ci(rows, aggregate, list(out), n_boot).items():
+        out[f"{key}_ci95"] = ci
+    return out
 
 
 def load_jsonl(path: Path) -> list[dict]:
@@ -66,6 +98,10 @@ def score(run: str, n_boot: int = 1000) -> dict:
         items = load_jsonl(data_dir / items_file)
         preds = load_jsonl(pred_dir / f"{task}.jsonl")
         metrics, rows = score_run(items, preds, task, labels=labels, n_bins=n_bins, n_boot=n_boot)
+        if task == "qa" and AUDIT_PATH.exists():
+            audit = json.loads(AUDIT_PATH.read_text(encoding="utf-8")).get(run)
+            if audit is not None:
+                metrics.update(apply_audit(rows, audit, n_boot))
         result[task] = metrics
         all_rows += [{"task": task, **r} for r in rows]
     meta_path = pred_dir / "meta.json"
