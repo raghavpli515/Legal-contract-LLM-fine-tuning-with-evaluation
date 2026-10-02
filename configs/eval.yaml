@@ -10,7 +10,10 @@ generation:
   do_sample: false           # greedy: deterministic, comparable runs
   max_new_tokens_classification: 16     # classification: short answers, 16 tokens max
   max_new_tokens_qa: 384
-  return_logprobs: true      # needed for calibration
+  # Same batch sizes for base and fine-tuned runs (padding can flip a greedy token).
+  # QA batch 1 fits the 6GB local GPU at ~1.7k-token prompts.
+  batch_size_classification: 4
+  batch_size_qa: 1
 
 scoring:
   # grounding: exact whole-word match after normalization (case/punctuation/whitespace);
