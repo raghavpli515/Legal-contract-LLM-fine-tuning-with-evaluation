@@ -13,6 +13,8 @@ and **calibration**, using identical quantization and decoding.
 
 > **Not legal advice.** This is a research/portfolio project. Outputs may be wrong.
 
+**Adapter on the Hugging Face Hub:** [PimoLee5/qwen2.5-7b-cuad-qlora](https://huggingface.co/PimoLee5/qwen2.5-7b-cuad-qlora) (165 MB LoRA weights; base model loaded separately).
+
 ## Results
 
 Qwen2.5-7B-Instruct (4-bit) before and after QLoRA, on 400 held-out items from 50 test
@@ -77,6 +79,7 @@ in both runs (14 items) was checked by hand against CUAD's category definitions:
 | `src/legal_ft/eval/generate.py` | GPU | writes `predictions.jsonl` |
 | `src/legal_ft/eval/{parse,grounding,metrics,report}.py` | local CPU | deterministic scoring |
 | `app/` | local 3050 | FastAPI + Streamlit demo |
+| `hub/`, `scripts/push_adapter.py` | local | model card template (filled from `results/`) and Hub upload |
 | `configs/` | everywhere | data / training / eval settings |
 
 ## Setup (local, Windows)

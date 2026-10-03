@@ -37,7 +37,7 @@ training:
   seed: 42                          # random seed for reproducibility
 
 hub:
-  adapter_repo: YOUR_HF_USERNAME/qwen2.5-7b-cuad-qlora   # set before pushing
+  adapter_repo: PimoLee5/qwen2.5-7b-cuad-qlora
 
 # Local dry run (scripts/dry_run_train.py): same code path, tiny model, 20 steps on the 3050.
 # Values here override `training` above.
