@@ -68,6 +68,38 @@ in both runs (14 items) was checked by hand against CUAD's category definitions:
 - The frozen metric is reported unchanged; audited rates are separate rows, and the report
   refuses to compute them unless every flagged item has a verdict.
 
+## Demo
+
+Paste a contract excerpt, pick one of 35 clause types, and get a grounded answer:
+present/absent, a calibrated confidence, and each quote checked against your excerpt
+(✅ found verbatim / ⚠️ not found), with a "not legal advice" notice on every answer.
+
+```powershell
+# terminal 1: API (loads the 4-bit base + the adapter from the Hub, ~1 min; ~5 GB GPU)
+uvicorn app.api:app --port 8000
+# terminal 2: UI at http://localhost:8501
+streamlit run app/ui.py
+```
+
+`POST /ask {"excerpt": ..., "clause_type": "Non-Compete"}` returns `present`, `confidence`
+(`high` ≥ 0.9, `medium` ≥ 0.7, else `low`), `quotes[{text, verified}]` and the disclaimer;
+`GET /clause-types` lists the labels. Excerpts over ~1,300 tokens are rejected with a message
+rather than silently truncated, because the model was trained on 1,200-token excerpts.
+Set `LEGAL_FT_ADAPTER` to a local path to use your own adapter.
+
+Confidence is P(present) read at the same position as in the evaluation, where the
+fine-tuned model's calibration error was 0.026. Answers on the built-in sample, on an
+RTX 3050 Laptop (6 GB):
+
+| Clause type | Answer | Confidence | Quote check |
+|---|---|---|---|
+| Non-Compete | present | 0.99 high | ✅ 18-month restriction quoted verbatim |
+| Competitive Restriction Exception | present | 0.83 medium | ✅ 5% shareholding carve-out |
+| Governing Law | present | 0.99 high | ✅ Delaware clause |
+| Audit Rights | absent | 1.00 high | – |
+
+Latency is 2–7 s per question.
+
 ## Repo layout
 
 | Path | Runs on | Purpose |
@@ -78,7 +110,7 @@ in both runs (14 items) was checked by hand against CUAD's category definitions:
 | `notebooks/kaggle_train.ipynb` | Kaggle T4 | thin training wrapper around the package |
 | `src/legal_ft/eval/generate.py` | GPU | writes `predictions.jsonl` |
 | `src/legal_ft/eval/{parse,grounding,metrics,report}.py` | local CPU | deterministic scoring |
-| `app/` | local 3050 | FastAPI + Streamlit demo |
+| `app/`, `src/legal_ft/inference.py` | local 3050 | FastAPI + Streamlit demo; shares prompts, decoding and grounding with the eval |
 | `hub/`, `scripts/push_adapter.py` | local | model card template (filled from `results/`) and Hub upload |
 | `configs/` | everywhere | data / training / eval settings |
 

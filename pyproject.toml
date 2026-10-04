@@ -47,6 +47,7 @@ track = [
 dev = [
     "pytest>=8.0",
     "ruff>=0.6",
+    "httpx>=0.27",       # FastAPI TestClient
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -55,6 +56,7 @@ packages = ["src/legal_ft"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+pythonpath = ["."]   # so tests can import the app/ package
 markers = ["gpu: needs a CUDA GPU and model weights (skipped by default)"]
 
 [tool.ruff]
