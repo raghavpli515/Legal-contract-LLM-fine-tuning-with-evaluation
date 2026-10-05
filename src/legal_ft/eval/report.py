@@ -25,11 +25,11 @@ TABLE = [
     ("classification", "macro_f1", "Clause classification macro-F1 ↑", "num"),
     ("qa", "presence_accuracy", "Q&A presence accuracy ↑", "pct"),
     ("qa", "hallucination_rate", "**Hallucination rate** ↓", "pct"),
-    ("qa", "hallucination_rate_audited", "  · after manual audit ↓", "pct"),
+    ("qa", "hallucination_rate_audited", "**Hallucination rate, after manual audit** ↓", "pct"),
     ("qa", "fabricated_rate", "Fabricated-clause rate ↓", "pct"),
     ("qa", "fabricated_rate_same_contract", "  · on hard negatives (same contract) ↓", "pct"),
     ("qa", "fabricated_rate_other_contract", "  · on easy negatives (other contract) ↓", "pct"),
-    ("qa", "fabricated_rate_audited", "  · after manual audit ↓", "pct"),
+    ("qa", "fabricated_rate_audited", "Fabricated-clause rate, after manual audit ↓", "pct"),
     ("qa", "ungrounded_rate", "Ungrounded-quote rate ↓", "pct"),
     ("qa", "missed_rate", "Missed-clause rate ↓", "pct"),
     ("qa", "evidence_f1", "Evidence token-F1 ↑", "num"),
@@ -114,9 +114,14 @@ def score(run: str, n_boot: int = 1000) -> dict:
     return result
 
 
+# Column headers for known run names; any other run is shown as named.
+DISPLAY_NAMES = {"base": "Base (zero-shot)", "finetuned": "Fine-tuned (QLoRA)"}
+
+
 def comparison_table(results: dict[str, dict]) -> str:
     runs = list(results)
-    lines = ["| Metric | " + " | ".join(runs) + " |", "|---|" + "---|" * len(runs)]
+    headers = [DISPLAY_NAMES.get(run, run) for run in runs]
+    lines = ["| Metric | " + " | ".join(headers) + " |", "|---|" + "---|" * len(runs)]
     for task, key, label, kind in TABLE:
         cells = []
         for run in runs:

@@ -26,11 +26,11 @@ contracts never seen in training. Same quantization, prompts and greedy decoding
 | Clause classification macro-F1 ↑ | 0.584 [0.507, 0.636] | 0.795 [0.719, 0.838] |
 | Q&A presence accuracy ↑ | 70.5% [64.0, 76.5] | 94.0% [90.5, 97.0] |
 | **Hallucination rate** ↓ | 2.0% [0.5, 4.0] | 5.0% [2.5, 8.0] |
-|   · after manual audit ↓ | 1.0% [0.0, 2.5] | 3.5% [1.5, 6.5] |
+| **Hallucination rate, after manual audit** ↓ | 1.0% [0.0, 2.5] | 3.5% [1.5, 6.5] |
 | Fabricated-clause rate ↓ | 2.0% [0.0, 5.1] | 7.0% [2.3, 12.8] |
 |   · on hard negatives (same contract) ↓ | 4.1% | 6.1% |
 |   · on easy negatives (other contract) ↓ | 0.0% | 7.8% |
-|   · after manual audit ↓ | 0.0% [0.0, 0.0] | 5.0% [1.1, 10.0] |
+| Fabricated-clause rate, after manual audit ↓ | 0.0% [0.0, 0.0] | 5.0% [1.1, 10.0] |
 | Ungrounded-quote rate ↓ | 4.7% | 3.0% |
 | Missed-clause rate ↓ | 57.0% | 5.0% |
 | Evidence token-F1 ↑ | 0.742 | 0.816 |
@@ -104,7 +104,7 @@ error was 0.026 (Q&A) and 0.071 (classification). On an RTX 3050 Laptop (6 GB):
 
 Classification named the right type for 5 of 5 hand-written clauses (termination for
 convenience, governing law, audit rights, cap on liability, anti-assignment). These are
-spot checks of the demo; the measured accuracy is in the Results table. Latency is 2–7 s
+spot checks of the demo; the measured accuracy is in the Results table. Latency is about 2–9 s
 per Q&A answer and 1–2 s per classification.
 
 The demo does not review whole contracts or take free-form questions: the model was trained

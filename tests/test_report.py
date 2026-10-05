@@ -80,3 +80,12 @@ def test_audit_must_cover_every_flagged_item():
 
     with pytest.raises(ValueError, match="lack an audit verdict"):
         apply_audit([_qa_row(0, False, fabricated=True)], {}, n_boot=20)
+
+
+def test_table_uses_readable_run_names_and_unambiguous_audit_rows(oracle_run):
+    from legal_ft.eval.report import comparison_table, score
+
+    result = score(oracle_run, n_boot=20)
+    table = comparison_table({"base": result, "finetuned": result})
+    assert table.splitlines()[0] == "| Metric | Base (zero-shot) | Fine-tuned (QLoRA) |"
+    assert "· after manual audit" not in table  # each audited row names its own metric

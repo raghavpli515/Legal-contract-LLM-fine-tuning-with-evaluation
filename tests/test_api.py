@@ -164,3 +164,12 @@ def test_classification_verbose_output_is_scored_but_flagged():
     labels = load_categories()["labels"]
     out = build_classification("This is an Audit Rights clause.", math.log(0.5), labels)
     assert out.label == "Audit Rights" and out.valid_output is False
+
+
+def test_ui_never_shows_100_percent():
+    pytest.importorskip("streamlit")
+    from app.ui import format_confidence  # page code runs; the API being down is handled
+
+    assert format_confidence(0.9996) == ">99%"
+    assert format_confidence(0.98) == "98%"
+    assert format_confidence(0.001) == "<1%"

@@ -62,10 +62,19 @@ def post(path: str, payload: dict) -> dict | None:
     return r.json()
 
 
+def format_confidence(p: float) -> str:
+    """A probabilistic model is never certain: show ">99%" rather than a rounded "100%"."""
+    if p >= 0.995:
+        return ">99%"
+    if p < 0.005:
+        return "<1%"
+    return f"{p:.0%}"
+
+
 def show_confidence(answer: dict, ece: float | None) -> None:
     colour = LABEL_COLOURS[answer["confidence_label"]]
     st.markdown(f"**Confidence:** :{colour}[{answer['confidence_label']} · "
-                f"{answer['confidence']:.0%}]")
+                f"{format_confidence(answer['confidence'])}]")
     st.progress(answer["confidence"])
     measured = f" (calibration error {ece:.3f} on held-out contracts)" if ece is not None else ""
     st.caption(f"Confidence is the model's probability for its own answer{measured}. "
