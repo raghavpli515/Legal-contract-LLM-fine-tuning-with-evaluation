@@ -1,6 +1,7 @@
 """Demo API and answer logic with a fake model (no GPU, no download)."""
 
 import json
+import math
 
 import pytest
 
@@ -13,6 +14,7 @@ from legal_ft.inference import (
     DISCLAIMER,
     InvalidRequest,
     build_answer,
+    build_classification,
     confidence_label,
     load_categories,
 )
@@ -40,6 +42,13 @@ class FakeQA:
         if len(excerpt.split()) > 50:
             raise InvalidRequest("The excerpt is too long.")
         return build_answer(clause_type, excerpt, self.output, self.p_present)
+
+    def classify(self, clause):
+        self.calls += 1
+        if len(clause.split()) > 50:
+            raise InvalidRequest("The clause is too long.")
+        return build_classification("Termination For Convenience", math.log(0.82),
+                                    self.clause_types)
 
 
 def client_for(fake):
@@ -118,3 +127,40 @@ def test_packaged_categories_match_data_build():
     data = json.loads(built.read_text(encoding="utf-8"))
     assert packaged["labels"] == data["labels"]
     assert all(packaged["descriptions"][k] == data["descriptions"][k] for k in data["labels"])
+
+
+# ---- classification ----------------------------------------------------------------
+
+CLAUSE = "Either party may terminate this Agreement without cause upon thirty days' notice."
+
+
+def test_classify_returns_label_confidence_and_disclaimer():
+    with client_for(FakeQA()) as c:
+        r = c.post("/classify", json={"clause": CLAUSE})
+    assert r.status_code == 200
+    out = r.json()
+    assert out["label"] == "Termination For Convenience"
+    assert out["confidence"] == pytest.approx(0.82) and out["confidence_label"] == "medium"
+    assert out["valid_output"] is True and out["disclaimer"] == DISCLAIMER
+    assert "raw_output" not in out
+
+
+def test_classify_rejects_overlong_and_empty_clauses():
+    fake = FakeQA()
+    with client_for(fake) as c:
+        long = c.post("/classify", json={"clause": "word " * 60})
+        empty = c.post("/classify", json={"clause": ""})
+    assert long.status_code == 422 and "too long" in long.json()["detail"]
+    assert empty.status_code == 422 and fake.calls == 1  # empty rejected before the model
+
+
+def test_classification_output_outside_label_set_has_no_label():
+    labels = load_categories()["labels"]
+    out = build_classification("Term Extension", math.log(0.2), labels)
+    assert out.label is None and out.valid_output is False and out.confidence_label == "low"
+
+
+def test_classification_verbose_output_is_scored_but_flagged():
+    labels = load_categories()["labels"]
+    out = build_classification("This is an Audit Rights clause.", math.log(0.5), labels)
+    assert out.label == "Audit Rights" and out.valid_output is False

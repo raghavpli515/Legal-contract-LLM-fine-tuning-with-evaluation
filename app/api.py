@@ -1,4 +1,5 @@
-"""FastAPI service for the contract-clause demo.
+"""FastAPI service for the contract-clause demo: POST /ask (grounded Q&A) and POST /classify
+(clause type), the two tasks the adapter was trained and evaluated on.
 
     uvicorn app.api:app --port 8000
 
@@ -46,6 +47,21 @@ class AskResponse(BaseModel):
     disclaimer: str = DISCLAIMER
 
 
+class ClassifyRequest(BaseModel):
+    clause: str = Field(min_length=1, max_length=MAX_EXCERPT_CHARS,
+                        description="A single contract clause (up to ~500 tokens)")
+
+
+class ClassifyResponse(BaseModel):
+    label: str | None
+    confidence: float
+    confidence_label: str
+    valid_output: bool
+    latency_s: float
+    model: str
+    disclaimer: str = DISCLAIMER
+
+
 def default_factory():
     from legal_ft.inference import ClauseQA
 
@@ -82,6 +98,15 @@ def create_app(qa_factory: Callable = default_factory) -> FastAPI:
             raise HTTPException(status_code=422, detail=str(e)) from e
         return AskResponse(**{k: v for k, v in answer.to_dict().items() if k != "raw_output"},
                            model=app.state.qa.model_name)
+
+    @app.post("/classify", response_model=ClassifyResponse)
+    def classify(req: ClassifyRequest):
+        try:
+            result = app.state.qa.classify(req.clause)
+        except InvalidRequest as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
+        return ClassifyResponse(**{k: v for k, v in result.to_dict().items() if k != "raw_output"},
+                                model=app.state.qa.model_name)
 
     return app
 

@@ -70,9 +70,13 @@ in both runs (14 items) was checked by hand against CUAD's category definitions:
 
 ## Demo
 
-Paste a contract excerpt, pick one of 35 clause types, and get a grounded answer:
-present/absent, a calibrated confidence, and each quote checked against your excerpt
-(✅ found verbatim / ⚠️ not found), with a "not legal advice" notice on every answer.
+A local web page with three tabs, each with a "not legal advice" notice above it:
+
+| Tab | What it does |
+|---|---|
+| **Find a clause** | Paste a contract excerpt and pick one of 35 clause types. Answers present/absent with a calibrated confidence and quotes the clause; each quote is checked against your excerpt (✅ found verbatim / ⚠️ not found). |
+| **Classify a clause** | Paste a single clause; the model names its type, with confidence. |
+| **How well does it work?** | The before/after evaluation, read from `results/` (the same files as the table above), including what got worse. |
 
 ```powershell
 # terminal 1: API (loads the 4-bit base + the adapter from the Hub, ~1 min; ~5 GB GPU)
@@ -81,24 +85,30 @@ uvicorn app.api:app --port 8000
 streamlit run app/ui.py
 ```
 
-`POST /ask {"excerpt": ..., "clause_type": "Non-Compete"}` returns `present`, `confidence`
-(`high` ≥ 0.9, `medium` ≥ 0.7, else `low`), `quotes[{text, verified}]` and the disclaimer;
-`GET /clause-types` lists the labels. Excerpts over ~1,300 tokens are rejected with a message
-rather than silently truncated, because the model was trained on 1,200-token excerpts.
-Set `LEGAL_FT_ADAPTER` to a local path to use your own adapter.
+API: `POST /ask {"excerpt", "clause_type"}` returns `present`, `confidence` (`high` ≥ 0.9,
+`medium` ≥ 0.7, else `low`), `quotes[{text, verified}]` and the disclaimer;
+`POST /classify {"clause"}` returns `label` and `confidence`; `GET /clause-types` lists the
+labels. Inputs longer than the model was trained on (excerpts over ~1,300 tokens, clauses
+over ~500) are rejected with a message rather than silently truncated. Set
+`LEGAL_FT_ADAPTER` to a local path to use your own adapter.
 
-Confidence is P(present) read at the same position as in the evaluation, where the
-fine-tuned model's calibration error was 0.026. Answers on the built-in sample, on an
-RTX 3050 Laptop (6 GB):
+Confidence is read exactly as in the evaluation, where the fine-tuned model's calibration
+error was 0.026 (Q&A) and 0.071 (classification). On an RTX 3050 Laptop (6 GB):
 
-| Clause type | Answer | Confidence | Quote check |
+| Find a clause (built-in sample excerpt) | Answer | Confidence | Quote check |
 |---|---|---|---|
 | Non-Compete | present | 0.99 high | ✅ 18-month restriction quoted verbatim |
 | Competitive Restriction Exception | present | 0.83 medium | ✅ 5% shareholding carve-out |
 | Governing Law | present | 0.99 high | ✅ Delaware clause |
 | Audit Rights | absent | 1.00 high | – |
 
-Latency is 2–7 s per question.
+Classification named the right type for 5 of 5 hand-written clauses (termination for
+convenience, governing law, audit rights, cap on liability, anti-assignment). These are
+spot checks of the demo; the measured accuracy is in the Results table. Latency is 2–7 s
+per Q&A answer and 1–2 s per classification.
+
+The demo does not review whole contracts or take free-form questions: the model was trained
+and evaluated on one excerpt and one of 35 clause types at a time.
 
 ## Repo layout
 

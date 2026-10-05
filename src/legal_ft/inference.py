@@ -9,20 +9,24 @@ excerpt with the evaluation's exact grounding rule.
 from __future__ import annotations
 
 import json
+import math
 import threading
 import time
 from dataclasses import asdict, dataclass, field
 from importlib import resources
 
 from legal_ft.eval.grounding import is_grounded
-from legal_ft.eval.parse import parse_qa
-from legal_ft.prompts import build_qa_messages
+from legal_ft.eval.parse import parse_classification, parse_qa
+from legal_ft.prompts import build_classification_messages, build_qa_messages
 
 DEFAULT_ADAPTER = "PimoLee5/qwen2.5-7b-cuad-qlora"
 DEFAULT_BASE = "Qwen/Qwen2.5-7B-Instruct"
 # Training excerpts were 1,200 tokens; a little slack, still well inside the 2,048 context.
 MAX_EXCERPT_TOKENS = 1300
 MAX_NEW_TOKENS = 384
+# Training clauses were capped at 1,500 characters (~350 tokens).
+MAX_CLAUSE_TOKENS = 500
+MAX_NEW_TOKENS_CLASSIFICATION = 16
 DISCLAIMER = ("Not legal advice. This is a research model: it can miss clauses, mislabel them "
               "or misquote. Always read the contract and consult a qualified lawyer.")
 
@@ -90,6 +94,34 @@ def build_answer(clause_type: str, excerpt: str, raw_output: str, p_present: flo
     )
 
 
+@dataclass
+class Classification:
+    label: str | None            # None if the output named no known clause type
+    confidence: float            # probability of the generated label
+    confidence_label: str
+    valid_output: bool = True    # output was exactly one clause-type name
+    raw_output: str = ""
+    latency_s: float = 0.0
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+def build_classification(raw_output: str, seq_logprob: float, labels: list[str],
+                         latency_s: float = 0.0) -> Classification:
+    """Turn a raw generation + its log-probability into the demo answer. Pure (tested)."""
+    parsed = parse_classification(raw_output, labels)
+    confidence = math.exp(seq_logprob)
+    return Classification(
+        label=parsed.label,
+        confidence=round(confidence, 4),
+        confidence_label=confidence_label(confidence),
+        valid_output=parsed.valid,
+        raw_output=raw_output,
+        latency_s=round(latency_s, 2),
+    )
+
+
 class ClauseQA:
     """Loads the 4-bit base model + LoRA adapter once and answers one question at a time."""
 
@@ -134,3 +166,24 @@ class ClauseQA:
             p = p_present_batch(self.model, self.tokenizer, [text], *self._ids)[0]
             latency = time.perf_counter() - t0
         return build_answer(clause_type, excerpt, gen["output"], p, latency)
+
+    def validate_clause(self, clause: str) -> None:
+        if not clause.strip():
+            raise InvalidRequest("The clause is empty.")
+        n = len(self.tokenizer(clause, add_special_tokens=False).input_ids)
+        if n > MAX_CLAUSE_TOKENS:
+            raise InvalidRequest(
+                f"The clause is {n} tokens; classification was trained on single clauses up to "
+                f"~{MAX_CLAUSE_TOKENS}. Paste one clause, not a whole section.")
+
+    def classify(self, clause: str) -> Classification:
+        from legal_ft.eval.generate import chat_text, generate_batch
+
+        self.validate_clause(clause)
+        text = chat_text(self.tokenizer, build_classification_messages(clause, self.clause_types))
+        with self._lock:
+            t0 = time.perf_counter()
+            gen = generate_batch(self.model, self.tokenizer, [text],
+                                 MAX_NEW_TOKENS_CLASSIFICATION)[0]
+            latency = time.perf_counter() - t0
+        return build_classification(gen["output"], gen["seq_logprob"], self.clause_types, latency)
