@@ -2,6 +2,7 @@
 
     python scripts/push_adapter.py            # dry run: writes outputs/hub_preview/ only
     python scripts/push_adapter.py --push     # creates the repo (if needed) and uploads
+    python scripts/push_adapter.py --push --card-only   # update the model card (README) only
 
 Only adapter files are uploaded (no checkpoints or optimizer state). Every number in the
 card comes from results/metrics/*.json and the training log, so it cannot drift from the
@@ -23,6 +24,7 @@ LOG_HISTORY = REPO_ROOT / "outputs" / "qlora" / "log_history.json"
 UPLOAD_FILES = ("adapter_config.json", "adapter_model.safetensors", "tokenizer.json",
                 "tokenizer_config.json", "chat_template.jinja")
 GITHUB_URL = "https://github.com/raghavpli515/Legal-contract-LLM-fine-tuning-with-evaluation"
+VIDEO_URL = "https://youtu.be/hcN9TmknxCs"
 
 
 def _pct(x: float) -> str:
@@ -54,6 +56,7 @@ def card_values() -> dict[str, str]:
 
     return {
         "repo_url": GITHUB_URL,
+        "video_url": VIDEO_URL,
         "hub_repo": load_config("train_qlora")["hub"]["adapter_repo"],
         "cls_acc_base": _pct_ci(b["classification"], "accuracy"),
         "cls_acc_ft": _pct_ci(f["classification"], "accuracy"),
@@ -90,6 +93,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--push", action="store_true", help="actually create the repo and upload")
     ap.add_argument("--private", action="store_true")
+    ap.add_argument("--card-only", action="store_true",
+                    help="upload only README.md (the model card), not the adapter weights")
     args = ap.parse_args()
 
     missing = [f for f in UPLOAD_FILES if not (ADAPTER_DIR / f).exists()]
@@ -114,6 +119,12 @@ def main() -> int:
     from huggingface_hub import HfApi
 
     api = HfApi()
+    if args.card_only:
+        commit = api.upload_file(path_or_fileobj=str(preview / "README.md"), path_in_repo="README.md",
+                                 repo_id=repo_id, repo_type="model",
+                                 commit_message="Update model card")
+        print(f"Pushed model card: https://huggingface.co/{repo_id} ({commit.oid[:8]})")
+        return 0
     api.create_repo(repo_id, repo_type="model", private=args.private, exist_ok=True)
     commit = api.upload_folder(folder_path=str(preview), repo_id=repo_id, repo_type="model",
                                commit_message="Upload QLoRA adapter and model card")

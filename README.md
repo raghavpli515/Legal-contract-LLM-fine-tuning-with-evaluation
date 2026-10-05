@@ -13,7 +13,9 @@ and **calibration**, using identical quantization and decoding.
 
 > **Not legal advice.** This is a research/portfolio project. Outputs may be wrong.
 
-**Adapter on the Hugging Face Hub:** [PimoLee5/qwen2.5-7b-cuad-qlora](https://huggingface.co/PimoLee5/qwen2.5-7b-cuad-qlora) (165 MB LoRA weights; base model loaded separately).
+**Demo video:** [watch on YouTube](https://youtu.be/hcN9TmknxCs) · **Adapter on the Hugging Face Hub:** [PimoLee5/qwen2.5-7b-cuad-qlora](https://huggingface.co/PimoLee5/qwen2.5-7b-cuad-qlora) (165 MB LoRA weights; base model loaded separately).
+
+[![Demo: finding, quoting and classifying contract clauses, and the before/after evaluation](https://img.youtube.com/vi/hcN9TmknxCs/maxresdefault.jpg)](https://youtu.be/hcN9TmknxCs)
 
 ## Results
 

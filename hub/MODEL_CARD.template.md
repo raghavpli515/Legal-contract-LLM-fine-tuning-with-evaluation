@@ -28,6 +28,8 @@ before vs after on held-out contracts for accuracy, hallucination and calibratio
 
 Code, data pipeline and evaluation: $repo_url
 
+Demo video: $video_url
+
 ## Results
 
 400 held-out items from 50 CUAD test contracts never seen in training. Both models use the

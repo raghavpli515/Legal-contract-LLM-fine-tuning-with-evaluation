@@ -93,7 +93,7 @@ def macro_f1(y_true: Sequence[str], y_pred: Sequence[str]) -> float:
             fn[t] += 1
             fp[p] += 1
     f1s = []
-    for label in set(y_true):
+    for label in sorted(set(y_true)):  # fixed order: float sums identical across runs
         denom = 2 * tp[label] + fp[label] + fn[label]
         f1s.append(2 * tp[label] / denom if denom else 0.0)
     return sum(f1s) / len(f1s) if f1s else 0.0
