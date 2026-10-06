@@ -19,33 +19,34 @@ and **calibration**, using identical quantization and decoding.
 
 ## Results
 
-Qwen2.5-7B-Instruct (4-bit) before and after QLoRA, on 400 held-out items from 50 test
-contracts never seen in training. Same quantization, prompts and greedy decoding for both.
+Qwen2.5-7B-Instruct (4-bit) on 400 held-out items from 50 test contracts never seen in
+training, three ways: **zero-shot**, **3-shot** (worked examples in the prompt, no training)
+and **fine-tuned** with QLoRA. Same quantization, greedy decoding and scorer for all three.
 
-| Metric | Base (zero-shot) | Fine-tuned (QLoRA) |
-|---|---|---|
-| Clause classification accuracy ↑ | 61.5% [55.5, 67.5] | 80.0% [74.5, 85.5] |
-| Clause classification macro-F1 ↑ | 0.584 [0.507, 0.636] | 0.795 [0.719, 0.838] |
-| Q&A presence accuracy ↑ | 70.5% [64.0, 76.5] | 94.0% [90.5, 97.0] |
-| **Hallucination rate** ↓ | 2.0% [0.5, 4.0] | 5.0% [2.5, 8.0] |
-| **Hallucination rate, after manual audit** ↓ | 1.0% [0.0, 2.5] | 3.5% [1.5, 6.5] |
-| Fabricated-clause rate ↓ | 2.0% [0.0, 5.1] | 7.0% [2.3, 12.8] |
-|   · on hard negatives (same contract) ↓ | 4.1% | 6.1% |
-|   · on easy negatives (other contract) ↓ | 0.0% | 7.8% |
-| Fabricated-clause rate, after manual audit ↓ | 0.0% [0.0, 0.0] | 5.0% [1.1, 10.0] |
-| Ungrounded-quote rate ↓ | 4.7% | 3.0% |
-| Missed-clause rate ↓ | 57.0% | 5.0% |
-| Evidence token-F1 ↑ | 0.742 | 0.816 |
-| Q&A calibration error (ECE) ↓ | 0.283 | 0.026 |
-| Q&A Brier score ↓ | 0.286 | 0.055 |
-| Q&A confidence AUROC ↑ | 0.818 | 0.823 |
-| Classification ECE ↓ | 0.289 | 0.071 |
-| Classification format-valid ↑ | 96.0% | 100.0% |
-| Q&A format-valid (JSON) ↑ | 99.0% | 99.5% |
+| Metric | Base (zero-shot) | Base (3-shot) | Fine-tuned (QLoRA) |
+|---|---|---|---|
+| Clause classification accuracy ↑ | 61.5% [55.5, 67.5] | 63.5% [57.0, 69.5] | 80.0% [74.5, 85.5] |
+| Clause classification macro-F1 ↑ | 0.584 [0.507, 0.636] | 0.590 [0.517, 0.657] | 0.795 [0.719, 0.838] |
+| Q&A presence accuracy ↑ | 70.5% [64.0, 76.5] | 81.5% [76.0, 86.5] | 94.0% [90.5, 97.0] |
+| **Hallucination rate** ↓ | 2.0% [0.5, 4.0] | 4.5% [2.0, 7.5] | 5.0% [2.5, 8.0] |
+| **Hallucination rate, after manual audit** ↓ | 1.0% [0.0, 2.5] | 1.0% [0.0, 2.5] | 3.5% [1.5, 6.5] |
+| Fabricated-clause rate ↓ | 2.0% [0.0, 5.1] | 3.0% [0.0, 6.9] | 7.0% [2.3, 12.8] |
+|   · on hard negatives (same contract) ↓ | 4.1% | 4.1% | 6.1% |
+|   · on easy negatives (other contract) ↓ | 0.0% | 2.0% | 7.8% |
+| Fabricated-clause rate, after manual audit ↓ | 0.0% [0.0, 0.0] | 1.0% [0.0, 3.3] | 5.0% [1.1, 10.0] |
+| Ungrounded-quote rate ↓ | 4.7% | 9.0% | 3.0% |
+| Missed-clause rate ↓ | 57.0% | 34.0% | 5.0% |
+| Evidence token-F1 ↑ | 0.742 | 0.777 | 0.816 |
+| Q&A calibration error (ECE) ↓ | 0.283 | 0.164 | 0.026 |
+| Q&A Brier score ↓ | 0.286 | 0.173 | 0.055 |
+| Q&A confidence AUROC ↑ | 0.818 | 0.771 | 0.823 |
+| Classification ECE ↓ | 0.289 | 0.286 | 0.071 |
+| Classification format-valid ↑ | 96.0% | 98.0% | 100.0% |
+| Q&A format-valid (JSON) ↑ | 99.0% | 99.0% | 99.5% |
 
 n = 200 classification items, 200 Q&A items (held-out test contracts). Brackets: 95% bootstrap CI.
 
-**What changed.** Fine-tuning mostly fixed *recall and calibration*:
+**What fine-tuning changed.** Mostly *recall and calibration*:
 - The base model is cautious: it says "not present" for **57%** of clauses that are there,
   usually with near-certainty (51 of its 57 misses had P(present) < 5%). Fine-tuned: **5%**.
 - Calibration error drops about **10×** (Q&A ECE 0.283 → 0.026, Brier 0.286 → 0.055), so
@@ -53,20 +54,31 @@ n = 200 classification items, 200 Q&A items (held-out test contracts). Brackets:
 - Clause classification: **61.5% → 80.0%** accuracy, macro-F1 0.58 → 0.80, and every
   output is a valid label (96% → 100%).
 
-**What got worse.** The hallucination rate rises from **1.0% to 3.5%** after manual audit
-(2.0% → 5.0% raw; the confidence intervals overlap). Having learned to find clauses, the
-fine-tuned model sometimes labels a real passage as the wrong clause type, typically on a
-surface cue: a "minimum period of 12 months" contract term read as a Minimum Commitment.
-Every one of its fabricated-clause answers quotes the contract verbatim, so a reader can
-check the quote and see it does not fit; only one answer (0.5%) invents wording.
+**Was fine-tuning needed, or would prompting do?** The 3-shot baseline gives the base model
+three worked examples of the *same clause type* for each question (present / absent /
+present), taken from training contracts. It helps Q&A partway (missed clauses 57% → 34%,
+ECE 0.283 → 0.164) and barely moves classification (61.5% → 63.5%, within the confidence
+interval: three examples cannot teach 35 clause types). It stays far behind fine-tuning on
+both, and each 3-shot Q&A prompt is about 1,000 tokens longer (~2,400 vs ~1,500).
+
+**What got worse.** Fine-tuning raises the hallucination rate from **1.0% to 3.5%** after
+manual audit (2.0% → 5.0% raw; the confidence intervals overlap), while 3-shot prompting
+stays at 1.0%. Having learned to find clauses, the fine-tuned model sometimes labels a real
+passage as the wrong clause type, typically on a surface cue: a "minimum period of 12 months"
+contract term read as a Minimum Commitment. Every one of its fabricated-clause answers
+quotes the contract verbatim, so a reader can check the quote and see it does not fit; only
+one answer (0.5%) invents wording.
 
 **Manual audit** ([`results/audit.json`](results/audit.json)). Every flagged hallucination
-in both runs (14 items) was checked by hand against CUAD's category definitions:
-- 2 "fabricated clauses", flagged identically for both models, are **real clauses CUAD did
-  not annotate** (e.g. a second "third party beneficiary" sentence in a recital).
-  Hard negatives taken from elsewhere in the same contract carry this label noise.
-- 1 "ungrounded quote" is faithful: the model dropped a page number that a PDF page break
-  left mid-sentence in CUAD's text.
+in all three runs (23 flags) was checked by hand against CUAD's category definitions:
+- **Label gaps.** The same 2 "fabricated clauses" are flagged in every run and are real
+  clauses CUAD did not annotate (e.g. a second "third party beneficiary" sentence in a
+  recital). Hard negatives taken from elsewhere in the same contract carry this label noise.
+- **Scorer artifacts.** 6 "ungrounded quotes" are faithful: the model left out a page number
+  or header that a PDF page break put mid-sentence in CUAD's text (5 cases), or corrected a
+  typo in the contract ("itsrenewals"). Five of the six are in the 3-shot run, whose longer
+  quotes cross page breaks more often, so its raw ungrounded rate (9.0%) overstates its
+  errors; its one real misquote changed "Article 5.2.1" to "5.2.2".
 - The frozen metric is reported unchanged; audited rates are separate rows, and the report
   refuses to compute them unless every flagged item has a verdict.
 
@@ -198,6 +210,12 @@ and rejected: at a 90% similarity threshold, 46/46 gold quotes with one number c
 46/46 with "shall" turned into "shall not" still passed. The exact rule accepts 148/148 gold
 quotes and rejects all of those alterations.
 
+**Few-shot baseline.** `--shots 3` inserts three demonstrations before each question, drawn
+only from training contracts (the run aborts if a demonstration comes from an eval contract).
+Q&A demonstrations are the same clause type as the question, in the order present / absent /
+present; classification uses three fixed clause → label examples. Demonstration excerpts are
+cropped to ~250 tokens around the quoted clause so the prompt fits a 6 GB GPU.
+
 **Harness checks.** Scoring the gold answers as predictions must give perfect scores, and a
 model that always claims a clause with an invented quote must score 100% hallucination.
 Both run as tests against the real eval files.
@@ -243,5 +261,7 @@ is truncated, and that the saved adapter reloads and answers in valid JSON.
   Metadata fields (parties, dates) are excluded; Q&A positives whose gold quotes exceed
   1,500 characters were dropped, so very long clauses are untested.
 - **One run.** A single training run and seed; no hyperparameter search or rank ablation yet.
+- **Few-shot baseline is constrained by hardware.** Demonstrations are cropped to ~250 tokens
+  and limited to three; longer or more numerous demonstrations might close some of the gap.
 - **Exact grounding is strict.** A model that silently fixes a typo, or drops a stray page
   number, is marked ungrounded (seen once in the audit).

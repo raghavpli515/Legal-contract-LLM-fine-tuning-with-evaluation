@@ -25,6 +25,7 @@ mlruns/
 # Personal notes (not part of the repo)
 important.pdf
 important2.txt
+docs/
 
 # OS / IDE
 .DS_Store

@@ -192,7 +192,7 @@ with tab_results:
     st.markdown("The same base model **before and after** fine-tuning, on 400 held-out items from "
                 "50 contracts never seen in training. Same quantization, prompts and decoding.")
     if not metrics:
-        st.info("Results files not found. Run `python -m legal_ft.eval.report base finetuned`.")
+        st.info("Results files not found. Run `python -m legal_ft.eval.report base base_3shot finetuned`.")
     else:
         b, f = metrics["base"], metrics["finetuned"]
         cols = st.columns(4)

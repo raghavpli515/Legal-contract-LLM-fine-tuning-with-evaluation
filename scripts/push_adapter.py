@@ -38,8 +38,8 @@ def _pct_ci(m: dict, key: str) -> str:
 
 def card_values() -> dict[str, str]:
     metrics = {run: json.loads((REPO_ROOT / "results" / "metrics" / f"{run}.json").read_text())
-               for run in ("base", "finetuned")}
-    b, f = metrics["base"], metrics["finetuned"]
+               for run in ("base", "base_3shot", "finetuned")}
+    b, f, s3 = metrics["base"], metrics["finetuned"], metrics["base_3shot"]
     history = json.loads(LOG_HISTORY.read_text())
     losses = [h["loss"] for h in history if "loss" in h]
     evals = [h["eval_loss"] for h in history if "eval_loss" in h]
@@ -72,6 +72,13 @@ def card_values() -> dict[str, str]:
         "hall_ft": _pct_ci(f["qa"], "hallucination_rate"),
         "hall_audit_base": _pct_ci(b["qa"], "hallucination_rate_audited"),
         "hall_audit_ft": _pct_ci(f["qa"], "hallucination_rate_audited"),
+        "cls_acc_3shot": _pct_ci(s3["classification"], "accuracy"),
+        "cls_f1_3shot": f"{s3['classification']['macro_f1']:.3f}",
+        "qa_acc_3shot": _pct_ci(s3["qa"], "presence_accuracy"),
+        "missed_3shot": _pct(s3["qa"]["missed_rate"]),
+        "ece_3shot": f"{s3['qa']['ece']:.3f}",
+        "hall_3shot": _pct_ci(s3["qa"], "hallucination_rate"),
+        "hall_audit_3shot": _pct_ci(s3["qa"], "hallucination_rate_audited"),
         "fab_audit_base": _pct(b["qa"]["fabricated_rate_audited"]),
         "fab_audit_ft": _pct(f["qa"]["fabricated_rate_audited"]),
         "trainable_params": f"{n_params / 1e6:.1f}M",

@@ -105,7 +105,7 @@ def single_token_id(tokenizer, text: str) -> int:
 
 
 def run_task(model, tokenizer, task: str, items: list[dict], out_path: Path,
-             batch_size: int, max_new_tokens: int) -> None:
+             batch_size: int, max_new_tokens: int, fewshot=None) -> None:
     done = set()
     if out_path.exists():
         with out_path.open(encoding="utf-8") as f:
@@ -120,7 +120,8 @@ def run_task(model, tokenizer, task: str, items: list[dict], out_path: Path,
     with out_path.open("a", encoding="utf-8", newline="\n") as f:
         for b in range(0, len(todo), batch_size):
             batch = todo[b:b + batch_size]
-            texts = [chat_text(tokenizer, it["prompt"]) for it in batch]
+            texts = [chat_text(tokenizer, fewshot.messages_for(it) if fewshot else it["prompt"])
+                     for it in batch]
             t_batch = time.perf_counter()
             gens = generate_batch(model, tokenizer, texts, max_new_tokens)
             probs = p_present_batch(model, tokenizer, texts, true_id, false_id) if task == "qa" \
@@ -154,11 +155,28 @@ def main() -> None:
     ap.add_argument("--tasks", nargs="+", default=["classification", "qa"], choices=list(TASK_FILES))
     ap.add_argument("--limit", type=int, default=None, help="first N items per task (smoke test)")
     ap.add_argument("--embed-on-cpu", action="store_true", help="6GB GPUs (see modeling.py)")
+    ap.add_argument("--shots", type=int, default=0,
+                    help="few-shot baseline: demonstrations from the training split (0 or 3)")
+    ap.add_argument("--batch-size", type=int, default=None,
+                    help="override the per-task batch sizes in configs/eval.yaml")
     args = ap.parse_args()
 
     data_dir = REPO_ROOT / load_config("data")["output_dir"]
     out_dir = REPO_ROOT / ecfg["outputs"]["predictions_dir"] / args.run_name
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    fewshot = None
+    if args.shots:
+        from legal_ft.eval.fewshot import load_fewshot
+
+        fewshot = load_fewshot(data_dir, args.shots)
+        eval_contracts = set()
+        for name in TASK_FILES.values():
+            with (data_dir / name).open(encoding="utf-8") as f:
+                eval_contracts |= {json.loads(line)["contract_id"] for line in f}
+        leaked = fewshot.demo_contracts & eval_contracts
+        if leaked:
+            raise RuntimeError(f"few-shot demonstrations come from eval contracts: {leaked}")
 
     model, tokenizer = load_model(args.model, adapter=args.adapter, embed_on_cpu=args.embed_on_cpu)
     tokenizer.padding_side = "left"
@@ -169,6 +187,7 @@ def main() -> None:
     meta = {
         "run_name": args.run_name, "model": args.model, "adapter": args.adapter,
         "embed_on_cpu": args.embed_on_cpu, "decoding": GREEDY, "limit": args.limit,
+        "shots": args.shots, "batch_size_override": args.batch_size,
         "gpu": torch.cuda.get_device_name(0), "python": platform.python_version(),
         "torch": torch.__version__, "transformers": transformers.__version__,
         "peft": peft.__version__, "bitsandbytes": bitsandbytes.__version__,
@@ -181,8 +200,8 @@ def main() -> None:
             items = [json.loads(line) for line in f]
         items = items[: args.limit] if args.limit else items
         run_task(model, tokenizer, task, items, out_dir / f"{task}.jsonl",
-                 batch_size=gcfg[f"batch_size_{task}"],
-                 max_new_tokens=gcfg[f"max_new_tokens_{task}"])
+                 batch_size=args.batch_size or gcfg[f"batch_size_{task}"],
+                 max_new_tokens=gcfg[f"max_new_tokens_{task}"], fewshot=fewshot)
     print(f"predictions -> {out_dir}")
 
 

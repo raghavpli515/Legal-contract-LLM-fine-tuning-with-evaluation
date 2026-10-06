@@ -1,0 +1,84 @@
+{
+  "classification": {
+    "n": 200,
+    "accuracy": 0.635,
+    "macro_f1": 0.5904816944448281,
+    "format_valid_rate": 0.98,
+    "n_with_confidence": 200,
+    "ece": 0.2860467814251868,
+    "brier": 0.2752997055797101,
+    "auroc": 0.8133966130945961,
+    "mean_confidence": 0.921046781425187,
+    "accuracy_ci95": [
+      0.57,
+      0.695
+    ],
+    "macro_f1_ci95": [
+      0.516830831552242,
+      0.6566441375434156
+    ]
+  },
+  "qa": {
+    "n": 200,
+    "presence_accuracy": 0.815,
+    "hallucination_rate": 0.045,
+    "fabricated_rate": 0.03,
+    "ungrounded_rate": 0.08955223880597014,
+    "missed_rate": 0.34,
+    "present_without_quote_rate": 0.028985507246376812,
+    "evidence_f1": 0.7772465413679184,
+    "format_valid_rate": 0.99,
+    "n_with_confidence": 200,
+    "ece": 0.16423307555023026,
+    "brier": 0.17325333250047736,
+    "auroc": 0.7710993201790748,
+    "mean_confidence": 0.9791882889181693,
+    "fabricated_rate_same_contract": 0.04081632653061224,
+    "fabricated_rate_other_contract": 0.0196078431372549,
+    "hallucination_rate_ci95": [
+      0.02,
+      0.075
+    ],
+    "fabricated_rate_ci95": [
+      0.0,
+      0.06862745098039216
+    ],
+    "presence_accuracy_ci95": [
+      0.76,
+      0.865
+    ],
+    "hallucination_rate_audited": 0.01,
+    "fabricated_rate_audited": 0.01,
+    "hallucination_rate_audited_ci95": [
+      0.0,
+      0.025
+    ],
+    "fabricated_rate_audited_ci95": [
+      0.0,
+      0.03260869565217391
+    ]
+  },
+  "meta": {
+    "run_name": "base_3shot",
+    "model": "Qwen/Qwen2.5-7B-Instruct",
+    "adapter": null,
+    "embed_on_cpu": true,
+    "decoding": {
+      "do_sample": false,
+      "temperature": null,
+      "top_p": null,
+      "top_k": null,
+      "repetition_penalty": 1.0
+    },
+    "limit": null,
+    "shots": 3,
+    "batch_size_override": 1,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "python": "3.11.16",
+    "torch": "2.14.0+cu130",
+    "transformers": "5.17.0",
+    "peft": "0.21.0",
+    "bitsandbytes": "0.50.2",
+    "started": "2026-10-06 11:23:21"
+  }
+}

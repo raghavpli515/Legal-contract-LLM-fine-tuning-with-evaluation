@@ -115,7 +115,8 @@ def score(run: str, n_boot: int = 1000) -> dict:
 
 
 # Column headers for known run names; any other run is shown as named.
-DISPLAY_NAMES = {"base": "Base (zero-shot)", "finetuned": "Fine-tuned (QLoRA)"}
+DISPLAY_NAMES = {"base": "Base (zero-shot)", "base_3shot": "Base (3-shot)",
+                 "finetuned": "Fine-tuned (QLoRA)"}
 
 
 def comparison_table(results: dict[str, dict]) -> str:

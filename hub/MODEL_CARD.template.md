@@ -32,23 +32,26 @@ Demo video: $video_url
 
 ## Results
 
-400 held-out items from 50 CUAD test contracts never seen in training. Both models use the
-same 4-bit quantization, prompts and greedy decoding. Brackets are 95% bootstrap CIs.
+400 held-out items from 50 CUAD test contracts never seen in training. All runs use the
+same 4-bit quantization, greedy decoding and scorer. Brackets are 95% bootstrap CIs.
 
-| Metric | Base (zero-shot) | This adapter |
-|---|---|---|
-| Clause classification accuracy ↑ | $cls_acc_base | **$cls_acc_ft** |
-| Clause classification macro-F1 ↑ | $cls_f1_base | **$cls_f1_ft** |
-| Q&A presence accuracy ↑ | $qa_acc_base | **$qa_acc_ft** |
-| Missed-clause rate ↓ | $missed_base | **$missed_ft** |
-| Q&A calibration error (ECE) ↓ | $ece_base | **$ece_ft** |
-| Hallucination rate, after manual audit ↓ | **$hall_audit_base** | $hall_audit_ft |
-| Hallucination rate, raw ↓ | **$hall_base** | $hall_ft |
+| Metric | Base (zero-shot) | Base (3-shot) | This adapter |
+|---|---|---|---|
+| Clause classification accuracy ↑ | $cls_acc_base | $cls_acc_3shot | **$cls_acc_ft** |
+| Clause classification macro-F1 ↑ | $cls_f1_base | $cls_f1_3shot | **$cls_f1_ft** |
+| Q&A presence accuracy ↑ | $qa_acc_base | $qa_acc_3shot | **$qa_acc_ft** |
+| Missed-clause rate ↓ | $missed_base | $missed_3shot | **$missed_ft** |
+| Q&A calibration error (ECE) ↓ | $ece_base | $ece_3shot | **$ece_ft** |
+| Hallucination rate, after manual audit ↓ | **$hall_audit_base** | **$hall_audit_3shot** | $hall_audit_ft |
+| Hallucination rate, raw ↓ | **$hall_base** | $hall_3shot | $hall_ft |
+
+"3-shot" gives the base model three worked examples of the same clause type in the prompt
+(no training). It helps Q&A partway and barely moves classification.
 
 **Trade-off.** Fine-tuning fixed recall and calibration: the base model says "not present"
 for most clauses that are there, usually with near-certainty. The cost is more
 wrong-clause-type answers on contracts without the clause. Those answers still quote real
-contract text, so the quote can be checked. Every flagged hallucination in both runs was
+contract text, so the quote can be checked. Every flagged hallucination in all three runs was
 audited by hand; see the repository's `results/audit.json`.
 
 ## Intended use
